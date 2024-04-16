@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <gcrypt.h>
+#include <sys/stat.h>
 
 #define KEY_LENGTH 32   // AES-256 key length in bytes
 #define BLOCK_LENGTH 16 // AES block size in bytes
@@ -66,16 +67,20 @@ int main(int argc, char *argv[])
     fgets(password, sizeof(password), stdin);
     password[strcspn(password, "\n")] = '\0'; // Remove trailing newline
 
-    file = fopen(filename, "r");
+    file = fopen(filename, "rb");
     if (file == NULL)
     {
         printf("Error opening file.\n");
         return 1;
     }
 
-    fseek(file, 0, SEEK_END);
-    file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
+    // fseek(file, 0, SEEK_END);
+    // file_size = ftell(file);
+    // fseek(file, 0, SEEK_SET);
+
+    struct stat st;
+    stat(filename, &st);
+    file_size = st.st_size;
 
     // Allocate memory for the buffer
     buffer = (char *)malloc(file_size + 1);
@@ -164,10 +169,12 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Error allocating memory for padded buffer\n");
         return 1;
     }
+    size_t num_padding_bytes = padded_len - plaintext_len;
 
-    memcpy(padded_buffer, buffer, file_size);                     // Copy original data
-    memset(padded_buffer + file_size, 0, padded_len - file_size); // Pad the remaining bytes
+    memcpy(padded_buffer, buffer, file_size); // Copy original data
+    // memset(padded_buffer + file_size, 0, padded_len - file_size); // Pad the remaining bytes
 
+    memset(padded_buffer + plaintext_len, num_padding_bytes, num_padding_bytes);
     // Encrypt data
     error = gcry_cipher_encrypt(aes_hd, ciphertext, ciphertext_len, padded_buffer, padded_len);
     if (error)
@@ -248,12 +255,12 @@ int main(int argc, char *argv[])
     }
     fwrite(concatenated_data, 1, concat_len, output_file);
     printf("Concat len: %ld", concat_len);
-    printf("Concatenated data:\n");
-    for (size_t i = 0; i < concat_len; ++i)
-    {
-        printf("%02x", concatenated_data[i]);
-    }
-    printf("\n");
+    // printf("Concatenated data:\n");
+    // for (size_t i = 0; i < concat_len; ++i)
+    // {
+    //     printf("%02x", concatenated_data[i]);
+    // }
+    // printf("\n");
     fclose(output_file);
 
     // Clean up

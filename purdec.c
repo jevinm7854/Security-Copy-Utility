@@ -195,7 +195,13 @@ int main(int argc, char *argv[])
 
     printf("Decryption successful\n");
     // Print the decrypted plaintext
-    printf("Decrypted plaintext:\n%s\n", plaintext);
+    // printf("Decrypted plaintext:\n%s\n", plaintext);
+    // printf("Decrypted plaintext:\n");
+    // for (size_t i = 0; i < plaintext_len; ++i)
+    // {
+    //     printf("%02x ", (unsigned char)plaintext[i]);
+    // }
+    // printf("\n");
 
     // printf("Salt: ");
     // for (int i = 0; i < 16; ++i)
@@ -203,6 +209,42 @@ int main(int argc, char *argv[])
     //     printf("%02x", salt[i]);
     // }
     // printf("\n");
+
+    char *new_filename = strdup(filename);  // Duplicate the filename
+    char *dot = strrchr(new_filename, '.'); // Find the last occurrence of '.'
+    if (dot != NULL)
+    {
+        *dot = '\0'; // Replace the dot with null terminator
+    }
+
+    size_t new_plaintext_len = plaintext_len;
+    if (new_plaintext_len > 0)
+    {
+        unsigned char last_byte = plaintext[new_plaintext_len - 1];
+
+        if (last_byte > 0 && last_byte <= BLOCK_LENGTH)
+        {
+            new_plaintext_len -= last_byte;
+        }
+    }
+
+    // for (size_t i = 0; i < new_plaintext_len; ++i)
+    // {
+    //     printf("%02x ", (unsigned char)plaintext[i]);
+    // }
+    // printf("\n");
+    FILE *output_file = fopen(new_filename, "wb"); // Open file in binary write mode
+    if (output_file == NULL)
+    {
+        printf("Error opening output file.\n");
+        free(new_filename);
+        return 1;
+    }
+
+    // fwrite(plaintext, sizeof(unsigned char), plaintext_len, output_file); // Write decrypted binary data to the output file
+    fwrite(plaintext, sizeof(unsigned char), new_plaintext_len, output_file);
+    fclose(output_file);
+    free(new_filename);
 
     return 0;
 }
