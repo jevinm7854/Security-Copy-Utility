@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <gcrypt.h>
+#include <stdbool.h>
 
 #define KEY_LENGTH 32   // AES-256 key length in bytes
 #define BLOCK_LENGTH 16 // AES block size in bytes
@@ -218,13 +219,27 @@ int main(int argc, char *argv[])
     }
 
     size_t new_plaintext_len = plaintext_len;
+    bool valid = true;
+
     if (new_plaintext_len > 0)
     {
         unsigned char last_byte = plaintext[new_plaintext_len - 1];
 
-        if (last_byte > 0 && last_byte <= BLOCK_LENGTH)
+        if (last_byte > 0 && last_byte < BLOCK_LENGTH)
         {
-            new_plaintext_len -= last_byte;
+            for (int i = 1; i <= last_byte; ++i)
+            {
+                if (plaintext[new_plaintext_len - i] != last_byte)
+                {
+                    valid = false;
+                    break;
+                }
+            }
+
+            if (valid)
+            {
+                new_plaintext_len -= last_byte;
+            }
         }
     }
 
