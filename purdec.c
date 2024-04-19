@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
         printf("Filename length received: %d\n", filename_len);
 
         // Allocate memory for filename
-        char *filename = malloc(filename_len + 1); // Plus 1 for null terminator
+        filename = malloc(filename_len + 1); // Plus 1 for null terminator
         if (filename == NULL)
         {
             perror("Error allocating memory for filename");
