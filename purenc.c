@@ -3,6 +3,11 @@
 #include <stdlib.h>
 #include <gcrypt.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
 #define KEY_LENGTH 32   // AES-256 key length in bytes
 #define BLOCK_LENGTH 16 // AES block size in bytes
@@ -92,7 +97,7 @@ int main(int argc, char *argv[])
     fclose(file);
 
     // Print contents of the buffer
-    printf("File contents:\n%s\n", buffer);
+    // printf("File contents:\n%s\n", buffer);
 
     gcry_error_t error;
 
@@ -246,22 +251,106 @@ int main(int argc, char *argv[])
     strcpy(output_filename, filename);
     strcat(output_filename, ".pur");
 
-    // Write the concatenated data to a file
-    FILE *output_file = fopen(output_filename, "wb");
-    if (!output_file)
+    if (modeop == 1)
     {
-        fprintf(stderr, "Error opening output file\n");
-        return 1;
+
+        int sock = 0;
+        struct sockaddr_in serv_addr;
+        char *hello = "Hello from client";
+
+        if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+        {
+            perror("Socket creation error");
+            exit(EXIT_FAILURE);
+        }
+
+        // Set up the address structure
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_port = htons(atoi(port));
+
+        // Convert IPv4 and IPv6 addresses from text to binary form
+        if (inet_pton(AF_INET, ip, &serv_addr.sin_addr) <= 0)
+        {
+            perror("Invalid address/ Address not supported");
+            exit(EXIT_FAILURE);
+        }
+
+        // Connect to server
+        if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+        {
+            perror("Connection failed");
+            exit(EXIT_FAILURE);
+        }
+
+        printf("Connected to server\n");
+        // char *messages[] = {"Message 1", "Message 2", "Message 3"};
+        // int num_messages = sizeof(messages) / sizeof(messages[0]);
+
+        // Send data to server
+
+        int filename_len = strlen(output_filename);
+
+        // Send the length of the filename to the server
+        if (send(sock, &filename_len, sizeof(filename_len), 0) < 0)
+        {
+            perror("Error sending filename length");
+            exit(EXIT_FAILURE);
+        }
+        printf("Filename length sent: %d\n", filename_len);
+        // filename
+        if (send(sock, output_filename, strlen(output_filename), 0) < 0)
+        {
+            perror("Error sending file name");
+        }
+        printf("Filename sent: %s\n", output_filename);
+
+        // length of file
+        if (send(sock, &concat_len, sizeof(concat_len), 0) < 0)
+        {
+            perror("Error sending length");
+        }
+        printf("concat_len sent: %zu\n", concat_len);
+
+        if (send(sock, concatenated_data, concat_len, 0) < 0)
+        {
+            perror("Error sending file");
+        }
+        printf("File sent success");
+
+        // size_t bytes_read;
+        // while ((bytes_read = fread(concatenated_data, 1, concat_len, file)) > 0)
+        // {
+        //     send(sock, concatenated_data, bytes_read, 0);
+        // }
+        // for (int i = 0; i < num_messages; i++)
+        // {
+        //     send(sock, messages[i], strlen(messages[i]), 0);
+        //     printf("Message %d sent\n", i + 1);
+        // }
     }
-    fwrite(concatenated_data, 1, concat_len, output_file);
-    printf("Concat len: %ld", concat_len);
-    // printf("Concatenated data:\n");
-    // for (size_t i = 0; i < concat_len; ++i)
-    // {
-    //     printf("%02x", concatenated_data[i]);
-    // }
-    // printf("\n");
-    fclose(output_file);
+
+    // close(sock);
+
+    if (modeop == 2)
+    {
+
+        // Write the concatenated data to a file
+        FILE *output_file = fopen(output_filename, "wb");
+        if (!output_file)
+        {
+            fprintf(stderr, "Error opening output file\n");
+            return 1;
+        }
+        fwrite(concatenated_data, 1, concat_len, output_file);
+        printf("Concat len: %ld", concat_len);
+        // printf("Concatenated data:\n");
+        // for (size_t i = 0; i < concat_len; ++i)
+        // {
+        //     printf("%02x", concatenated_data[i]);
+        // }
+        // printf("\n");
+        fclose(output_file);
+    }
 
     // Clean up
     free(buffer);
