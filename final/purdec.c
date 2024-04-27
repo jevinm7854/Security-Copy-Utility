@@ -28,8 +28,8 @@ int main(int argc, char *argv[])
     if (argc == 3)
 
     {
-        filename = argv[1];
-        char *mode_or_port = argv[2];
+        filename = argv[2];
+        char *mode_or_port = argv[1];
         if (strcmp(mode_or_port, "-l") != 0)
         {
             printf("need second argument as -l for local mode");
@@ -59,9 +59,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    printf("Enter your password: ");
-    fgets(password, sizeof(password), stdin);
-    password[strcspn(password, "\n")] = '\0';
+    // printf("Enter your password: ");
+    // fgets(password, sizeof(password), stdin);
+    // password[strcspn(password, "\n")] = '\0';
 
     if (modeop == 1)
     {
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 
         // Set up the address structure
         address.sin_family = AF_INET;
-        address.sin_addr.s_addr = inet_addr("172.17.206.31");
+        address.sin_addr.s_addr = INADDR_ANY;
         address.sin_port = htons(port);
 
         // Bind socket to address
@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
             free(buffer); // Free allocated memory
             exit(EXIT_FAILURE);
         }
-        if (bytes_received != file_size)
+        if ((unsigned long int)bytes_received != file_size)
         {
             printf("Incomplete file content received\n");
             free(buffer); // Free allocated memory
@@ -221,6 +221,10 @@ int main(int argc, char *argv[])
     }
     // Print contents of the buffer
     // printf("File contents:\n%s\n", buffer);
+
+    printf("Enter your password: ");
+    fgets(password, sizeof(password), stdin);
+    password[strcspn(password, "\n")] = '\0';
 
     gcry_error_t error;
 
@@ -386,6 +390,13 @@ int main(int argc, char *argv[])
     //     printf("%02x ", (unsigned char)plaintext[i]);
     // }
     // printf("\n");
+
+    if (access(new_filename, F_OK) != -1)
+    {
+        fprintf(stderr, "Error: Output file '%s' already exists.\n", new_filename);
+        return 1;
+    }
+
     FILE *output_file = fopen(new_filename, "wb"); // Open file in binary write mode
     if (output_file == NULL)
     {

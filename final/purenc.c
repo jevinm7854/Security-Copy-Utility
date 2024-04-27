@@ -18,6 +18,7 @@ int main(int argc, char *argv[])
     char *ip;
     char *port;
     int modeop; // 2 for -l and 1 for -d
+    int modeop_both = 0;
     char *filename;
     char password[256];
     FILE *file;
@@ -27,7 +28,7 @@ int main(int argc, char *argv[])
     // Checking if correct number of arguments are provided
     if (argc < 3)
     {
-        printf("Usage: %s <txt_file> <-d or -l> [IP:port]\n", argv[0]);
+        printf("Usage: %s [txt_file] <-d  [IP:port] >  <-l> \n", argv[0]);
         return 1;
     }
 
@@ -45,7 +46,7 @@ int main(int argc, char *argv[])
     // If -d option is provided, check for IP and port
     if (strcmp(mode, "-d") == 0)
     {
-        if (argc != 4)
+        if (argc < 4)
         {
             printf("Error: When using -d option, you must provide IP:port.\n");
             return 1;
@@ -61,11 +62,38 @@ int main(int argc, char *argv[])
             return 1;
         }
         printf("File: %s\nMode: %s\nIP: %s\nPort: %s\n", filename, mode, ip, port);
+        if (argc == 5)
+        {
+            modeop_both = 1; // both -d and -l are provided in this order
+            printf("File: %s\nMode: l\n", filename);
+        }
     }
     else
     {
         modeop = 2;
         printf("File: %s\nMode: %s\n", filename, mode);
+        if (argc > 3)
+
+        {
+            printf("inside > 3");
+            if (argc < 4)
+            {
+                printf("Error: When using -d option, you must provide IP:port.\n");
+                return 1;
+            }
+            modeop = 1;
+            char *ip_port = argv[4];
+            char *delimiter = ":";
+            ip = strtok(ip_port, delimiter);
+            port = strtok(NULL, delimiter);
+            if (ip == NULL || port == NULL)
+            {
+                printf("Error: Invalid IP:port format.\n");
+                return 1;
+            }
+            printf("File: %s\nMode: %s\nIP: %s\nPort: %s\n", filename, mode, ip, port);
+            modeop_both = 1; // both -l and -d are provided in this order
+        }
     }
 
     printf("Enter your password: ");
@@ -251,12 +279,38 @@ int main(int argc, char *argv[])
     strcpy(output_filename, filename);
     strcat(output_filename, ".pur");
 
-    if (modeop == 1)
+    if (modeop == 2 || modeop_both)
+    {
+        // printf("inside here!!");
+        if (access(output_filename, F_OK) != -1)
+        {
+            fprintf(stderr, "Error: Output file '%s' already exists.\n", output_filename);
+            return 1;
+        }
+
+        // Write the concatenated data to a file
+        FILE *output_file = fopen(output_filename, "wb");
+        if (!output_file)
+        {
+            fprintf(stderr, "Error opening output file\n");
+            return 1;
+        }
+        fwrite(concatenated_data, 1, concat_len, output_file);
+        printf("Concat len: %ld", concat_len);
+        // printf("Concatenated data:\n");
+        // for (size_t i = 0; i < concat_len; ++i)
+        // {
+        //     printf("%02x", concatenated_data[i]);
+        // }
+        // printf("\n");
+        fclose(output_file);
+    }
+
+    if (modeop == 1 || modeop_both)
     {
 
         int sock = 0;
         struct sockaddr_in serv_addr;
-        char *hello = "Hello from client";
 
         if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         {
@@ -330,27 +384,6 @@ int main(int argc, char *argv[])
     }
 
     // close(sock);
-
-    if (modeop == 2)
-    {
-
-        // Write the concatenated data to a file
-        FILE *output_file = fopen(output_filename, "wb");
-        if (!output_file)
-        {
-            fprintf(stderr, "Error opening output file\n");
-            return 1;
-        }
-        fwrite(concatenated_data, 1, concat_len, output_file);
-        printf("Concat len: %ld", concat_len);
-        // printf("Concatenated data:\n");
-        // for (size_t i = 0; i < concat_len; ++i)
-        // {
-        //     printf("%02x", concatenated_data[i]);
-        // }
-        // printf("\n");
-        fclose(output_file);
-    }
 
     // Clean up
     free(buffer);
