@@ -96,9 +96,9 @@ int main(int argc, char *argv[])
         }
     }
 
-    printf("Enter your password: ");
-    fgets(password, sizeof(password), stdin);
-    password[strcspn(password, "\n")] = '\0'; // Remove trailing newline
+    // printf("Enter your password: ");
+    // fgets(password, sizeof(password), stdin);
+    // password[strcspn(password, "\n")] = '\0'; // Remove trailing newline
 
     file = fopen(filename, "rb");
     if (file == NULL)
@@ -126,6 +126,10 @@ int main(int argc, char *argv[])
 
     // Print contents of the buffer
     // printf("File contents:\n%s\n", buffer);
+
+    printf("Enter your password: ");
+    fgets(password, sizeof(password), stdin);
+    password[strcspn(password, "\n")] = '\0'; // Remove trailing newline
 
     gcry_error_t error;
 
@@ -173,7 +177,7 @@ int main(int argc, char *argv[])
     }
 
     gcry_cipher_hd_t aes_hd;
-    error = gcry_cipher_open(&aes_hd, GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_CBC, 0);
+    error = gcry_cipher_open(&aes_hd, GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_CBC, 0); 
     if (error)
     {
         fprintf(stderr, "Error opening AES cipher: %s\n", gcry_strerror(error));
