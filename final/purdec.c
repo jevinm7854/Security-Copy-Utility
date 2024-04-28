@@ -226,6 +226,19 @@ int main(int argc, char *argv[])
     fgets(password, sizeof(password), stdin);
     password[strcspn(password, "\n")] = '\0';
 
+    char *new_filename = strdup(filename);  // Duplicate the filename
+    char *dot = strrchr(new_filename, '.'); // Find the last occurrence of '.'
+    if (dot != NULL)
+    {
+        *dot = '\0'; // Replace the dot with null terminator
+    }
+
+    if (access(new_filename, F_OK) != -1)
+    {
+        fprintf(stderr, "Error: Output file '%s' already exists.\n", new_filename);
+        return 1;
+    }
+
     gcry_error_t error;
 
     // Initialize libgcrypt
@@ -353,12 +366,18 @@ int main(int argc, char *argv[])
     // }
     // printf("\n");
 
-    char *new_filename = strdup(filename);  // Duplicate the filename
-    char *dot = strrchr(new_filename, '.'); // Find the last occurrence of '.'
-    if (dot != NULL)
-    {
-        *dot = '\0'; // Replace the dot with null terminator
-    }
+    // char *new_filename = strdup(filename);  // Duplicate the filename
+    // char *dot = strrchr(new_filename, '.'); // Find the last occurrence of '.'
+    // if (dot != NULL)
+    // {
+    //     *dot = '\0'; // Replace the dot with null terminator
+    // }
+
+    // if (access(new_filename, F_OK) != -1)
+    // {
+    //     fprintf(stderr, "Error: Output file '%s' already exists.\n", new_filename);
+    //     return 1;
+    // }
 
     size_t new_plaintext_len = plaintext_len;
     bool valid = true;
@@ -391,11 +410,7 @@ int main(int argc, char *argv[])
     // }
     // printf("\n");
 
-    if (access(new_filename, F_OK) != -1)
-    {
-        fprintf(stderr, "Error: Output file '%s' already exists.\n", new_filename);
-        return 1;
-    }
+    
 
     FILE *output_file = fopen(new_filename, "wb"); // Open file in binary write mode
     if (output_file == NULL)
