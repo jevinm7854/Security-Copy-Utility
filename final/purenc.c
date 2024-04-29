@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
         if (argc > 3)
 
         {
-            printf("inside > 3");
+
             if (argc < 4)
             {
                 printf("Error: When using -d option, you must provide IP:port.\n");
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
                 printf("Error: Invalid IP:port format.\n");
                 return 1;
             }
-            printf("File: %s\nMode: %s\nIP: %s\nPort: %s\n", filename, mode, ip, port);
+            printf("File: %s\nMode: %s\nIP: %s\nPort: %s\n", filename, argv[3], ip, port);
             modeop_both = 1; // both -l and -d are provided in this order
         }
     }
@@ -313,7 +313,7 @@ int main(int argc, char *argv[])
             return 1;
         }
         fwrite(concatenated_data, 1, concat_len, output_file);
-        printf("Written %ld bytes to file\n", concat_len);
+        printf("Written %ld bytes to %s\n", concat_len, output_filename);
         // printf("Concat len: %ld", concat_len);
         // printf("Concatenated data:\n");
         // for (size_t i = 0; i < concat_len; ++i)
@@ -389,7 +389,7 @@ int main(int argc, char *argv[])
         {
             perror("Error sending file");
         }
-        printf("File sent success");
+        printf("File data sent success\n");
 
         // size_t bytes_read;
         // while ((bytes_read = fread(concatenated_data, 1, concat_len, file)) > 0)

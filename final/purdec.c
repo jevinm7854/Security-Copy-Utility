@@ -135,6 +135,7 @@ int main(int argc, char *argv[])
 
         filename[filename_len] = '\0';
 
+        printf("File name received\n");
         // for (int i = 0; i <= filename_len; i++)
         // {
         //     printf("!!!!!!!!!!! Filename is %d\n", filename[i]);
@@ -165,7 +166,7 @@ int main(int argc, char *argv[])
             free(buffer); // Free allocated memory
             exit(EXIT_FAILURE);
         }
-        printf("File contents received");
+        printf("File contents received\n");
     }
 
     // Checking if the first argument is a txt file
