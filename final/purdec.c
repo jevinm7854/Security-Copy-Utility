@@ -25,6 +25,7 @@ int main(int argc, char *argv[])
     size_t file_size;
 
     // Checking if correct number of arguments are provided
+    // local mode
     if (argc == 3)
 
     {
@@ -41,10 +42,11 @@ int main(int argc, char *argv[])
         // return 1;
     }
 
+    // network mode
     else if (argc == 2)
     {
         char *mode_or_port = argv[1];
-        port = atoi(mode_or_port);
+        port = atoi(mode_or_port); // set port
         if (port <= 0 || port > 65535)
         {
             printf("Error: Should be a valid port number to run on network mode .\n");
@@ -53,6 +55,7 @@ int main(int argc, char *argv[])
         modeop = 1;
         printf("Port: %s\n", mode_or_port);
     }
+    // if no port provided in network mode
     else
     {
         printf("Usage: %s <file_name -l> or < port_number>\n", argv[0]);
@@ -104,6 +107,7 @@ int main(int argc, char *argv[])
 
         printf("Connection accepted. Waiting for data...\n");
 
+        // receive file name length
         int filename_len;
         int bytes_received = read(new_socket, &filename_len, sizeof(filename_len));
         if (bytes_received < 0)
@@ -136,14 +140,16 @@ int main(int argc, char *argv[])
         //     printf("!!!!!!!!!!! Filename is %d\n", filename[i]);
         // }
 
+        // receive size of data
         bytes_received = read(new_socket, &file_size, sizeof(file_size));
         if (bytes_received < 0)
         {
             perror("Error receiving file size");
             exit(EXIT_FAILURE);
         }
-        printf("file_size before buffer is %ld\n", file_size);
+        // printf("file_size before buffer is %ld\n", file_size);
 
+        // allocate memory for data
         buffer = (char *)malloc(file_size + 1);
 
         bytes_received = read(new_socket, buffer, file_size);
@@ -159,6 +165,7 @@ int main(int argc, char *argv[])
             free(buffer); // Free allocated memory
             exit(EXIT_FAILURE);
         }
+        printf("File contents received");
     }
 
     // Checking if the first argument is a txt file
@@ -195,7 +202,7 @@ int main(int argc, char *argv[])
     // password[strcspn(password, "\n")] = '\0'; // Remove trailing newline
 
     if (modeop == 2)
-    {
+    { // open the file to read
         file = fopen(filename, "r");
         if (file == NULL)
         {
@@ -222,10 +229,12 @@ int main(int argc, char *argv[])
     // Print contents of the buffer
     // printf("File contents:\n%s\n", buffer);
 
+    // get password
     printf("Enter your password: ");
     fgets(password, sizeof(password), stdin);
     password[strcspn(password, "\n")] = '\0';
 
+    // remove the .pur extension
     char *new_filename = strdup(filename);  // Duplicate the filename
     char *dot = strrchr(new_filename, '.'); // Find the last occurrence of '.'
     if (dot != NULL)
@@ -233,6 +242,7 @@ int main(int argc, char *argv[])
         *dot = '\0'; // Replace the dot with null terminator
     }
 
+    // check if a file with same name already exists
     if (access(new_filename, F_OK) != -1)
     {
         fprintf(stderr, "Error: Output file '%s' already exists.\n", new_filename);
@@ -251,8 +261,9 @@ int main(int argc, char *argv[])
 
     // salt
     unsigned char salt[16];
-    memcpy(salt, buffer, 16);
+    memcpy(salt, buffer, 16); // extract the salt
 
+    // generate the key
     unsigned char key[KEY_LENGTH];
     error = gcry_kdf_derive(password, strlen(password), GCRY_KDF_PBKDF2, GCRY_MD_SHA256, salt, sizeof(salt), 10000, KEY_LENGTH, key);
     if (error)
@@ -261,6 +272,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // extract iv + cipher to generate HMAC
     unsigned char given_hmac[HMAC_LENGTH];
     unsigned char hmac[HMAC_LENGTH];
     size_t ciphertext_len = file_size - BLOCK_LENGTH - HMAC_LENGTH - BLOCK_LENGTH;
@@ -274,6 +286,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // generate the HMAC
     gcry_md_hd_t hmac_hd;
     error = gcry_md_open(&hmac_hd, GCRY_MD_SHA256, GCRY_MD_FLAG_HMAC);
     if (error)
@@ -296,8 +309,10 @@ int main(int argc, char *argv[])
     // }
     // printf("\n");
 
+    // Extract HMAC
     memcpy(given_hmac, buffer + 16, 32);
 
+    // Check if given HMAC and generated HMAC are same
     if (memcmp(hmac, given_hmac, HMAC_LENGTH) == 0)
     {
         printf("HMAC verification successful\n");
@@ -308,6 +323,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Extract iv
     unsigned char iv[BLOCK_LENGTH];
     memcpy(iv, buffer + BLOCK_LENGTH + HMAC_LENGTH, BLOCK_LENGTH);
 
@@ -341,6 +357,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // iv_cipher + BLOCK_LENGTH contains ciphertext
     error = gcry_cipher_decrypt(aes_hd, plaintext, plaintext_len, iv_cipher + BLOCK_LENGTH, ciphertext_len);
     if (error)
     {
@@ -349,7 +366,7 @@ int main(int argc, char *argv[])
     }
 
     printf("Decryption successful\n");
-    printf("Decrypted plain_text len: %ld\n", plaintext_len);
+    // printf("Decrypted plain_text len: %ld\n", plaintext_len);
     // Print the decrypted plaintext
     // printf("Decrypted plaintext:\n%s\n", plaintext);
     // printf("Decrypted plaintext:\n");
@@ -382,6 +399,7 @@ int main(int argc, char *argv[])
     size_t new_plaintext_len = plaintext_len;
     bool valid = true;
 
+    // Remove padding if it exists
     if (new_plaintext_len > 0)
     {
         unsigned char last_byte = plaintext[new_plaintext_len - 1];
@@ -410,8 +428,7 @@ int main(int argc, char *argv[])
     // }
     // printf("\n");
 
-    
-
+    // Write to the file
     FILE *output_file = fopen(new_filename, "wb"); // Open file in binary write mode
     if (output_file == NULL)
     {
@@ -422,6 +439,8 @@ int main(int argc, char *argv[])
 
     // fwrite(plaintext, sizeof(unsigned char), plaintext_len, output_file); // Write decrypted binary data to the output file
     fwrite(plaintext, sizeof(unsigned char), new_plaintext_len, output_file);
+    printf("Written %ld bytes to %s \n", new_plaintext_len, new_filename);
+    printf("Success. End of Program\n");
     fclose(output_file);
     free(new_filename);
 

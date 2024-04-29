@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // Checking if the first argument is a txt file
+    // first argument is file name
     filename = argv[1];
 
     // Checking if the second argument is either -d or -l
@@ -54,14 +54,15 @@ int main(int argc, char *argv[])
         modeop = 1;
         char *ip_port = argv[3];
         char *delimiter = ":";
-        ip = strtok(ip_port, delimiter);
-        port = strtok(NULL, delimiter);
+        ip = strtok(ip_port, delimiter); // get ip
+        port = strtok(NULL, delimiter);  // get port number
         if (ip == NULL || port == NULL)
         {
             printf("Error: Invalid IP:port format.\n");
             return 1;
         }
         printf("File: %s\nMode: %s\nIP: %s\nPort: %s\n", filename, mode, ip, port);
+        // if 5 arguments then both -l and -d selected
         if (argc == 5)
         {
             modeop_both = 1; // both -d and -l are provided in this order
@@ -69,9 +70,10 @@ int main(int argc, char *argv[])
         }
     }
     else
-    {
+    { // local mode
         modeop = 2;
         printf("File: %s\nMode: %s\n", filename, mode);
+        // if arguments more than 3, both -d and -l are selected
         if (argc > 3)
 
         {
@@ -100,6 +102,7 @@ int main(int argc, char *argv[])
     // fgets(password, sizeof(password), stdin);
     // password[strcspn(password, "\n")] = '\0'; // Remove trailing newline
 
+    // Open the given file
     file = fopen(filename, "rb");
     if (file == NULL)
     {
@@ -126,6 +129,8 @@ int main(int argc, char *argv[])
 
     // Print contents of the buffer
     // printf("File contents:\n%s\n", buffer);
+
+    // Take password as input
 
     printf("Enter your password: ");
     fgets(password, sizeof(password), stdin);
@@ -159,16 +164,17 @@ int main(int argc, char *argv[])
     size_t padded_len = ((plaintext_len + block_size - 1) / block_size) * block_size;
     size_t ciphertext_len = padded_len;
 
-    printf("plaintext_len: %ld\n ", plaintext_len);
-    printf("block size : %ld\n ", block_size);
-    printf("padded len : %ld\n ", padded_len);
-    printf("Salt: ");
-    for (int i = 0; i < 16; ++i)
-    {
-        printf("%02x", salt[i]);
-    }
-    printf("\n");
+    // printf("plaintext_len: %ld\n ", plaintext_len);
+    // printf("block size : %ld\n ", block_size);
+    // printf("padded len : %ld\n ", padded_len);
+    // printf("Salt: ");
+    // for (int i = 0; i < 16; ++i)
+    // {
+    //     printf("%02x", salt[i]);
+    // }
+    // printf("\n");
 
+    // allocate memory for ciphertext
     unsigned char *ciphertext = malloc(ciphertext_len);
     if (!ciphertext)
     {
@@ -177,7 +183,7 @@ int main(int argc, char *argv[])
     }
 
     gcry_cipher_hd_t aes_hd;
-    error = gcry_cipher_open(&aes_hd, GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_CBC, 0); 
+    error = gcry_cipher_open(&aes_hd, GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_CBC, 0);
     if (error)
     {
         fprintf(stderr, "Error opening AES cipher: %s\n", gcry_strerror(error));
@@ -190,8 +196,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    unsigned char iv[BLOCK_LENGTH]; // IV length is equal to block size
-    gcry_randomize(iv, BLOCK_LENGTH, GCRY_STRONG_RANDOM);
+    unsigned char iv[BLOCK_LENGTH];                       // IV length is equal to block size
+    gcry_randomize(iv, BLOCK_LENGTH, GCRY_STRONG_RANDOM); // create random iv
     error = gcry_cipher_setiv(aes_hd, iv, BLOCK_LENGTH);
     if (error)
     {
@@ -212,6 +218,7 @@ int main(int argc, char *argv[])
     // memset(padded_buffer + file_size, 0, padded_len - file_size); // Pad the remaining bytes
 
     memset(padded_buffer + plaintext_len, num_padding_bytes, num_padding_bytes);
+
     // Encrypt data
     error = gcry_cipher_encrypt(aes_hd, ciphertext, ciphertext_len, padded_buffer, padded_len);
     if (error)
@@ -220,6 +227,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    printf("Successfully encrypted!! \n");
+    // Concatenate iv and cipher to calculate HMAC
     size_t iv_cipher_len = BLOCK_LENGTH + ciphertext_len;
     unsigned char *iv_cipher = malloc(iv_cipher_len);
     if (!iv_cipher)
@@ -247,14 +256,15 @@ int main(int argc, char *argv[])
     }
     gcry_md_write(hmac_hd, iv_cipher, iv_cipher_len);
     memcpy(hmac, gcry_md_read(hmac_hd, GCRY_MD_SHA256), HMAC_LENGTH);
+    printf("Successfully generated HMAC \n");
 
     // Print HMAC
-    printf("HMAC: ");
-    for (size_t i = 0; i < HMAC_LENGTH; ++i)
-    {
-        printf("%02x", hmac[i]);
-    }
-    printf("\n");
+    // printf("HMAC: ");
+    // for (size_t i = 0; i < HMAC_LENGTH; ++i)
+    // {
+    //     printf("%02x", hmac[i]);
+    // }
+    // printf("\n");
 
     // Print the ciphertext
     // printf("Ciphertext: ");
@@ -264,6 +274,7 @@ int main(int argc, char *argv[])
     // }
     // printf("\n");
 
+    // Create buffer to store salt + HMAC + iv + ciphertext (in this order)
     size_t concat_len = sizeof(salt) + sizeof(hmac) + BLOCK_LENGTH + ciphertext_len;
     unsigned char *concatenated_data = malloc(concat_len);
     if (!concatenated_data)
@@ -280,12 +291,14 @@ int main(int argc, char *argv[])
 
     char *output_filename = malloc(strlen(filename) + 5); // 5 for ".pur\0"
 
+    // Add the .pur extension to the file
     strcpy(output_filename, filename);
     strcat(output_filename, ".pur");
 
     if (modeop == 2 || modeop_both)
     {
         // printf("inside here!!");
+        // Check if the file with same name already exists
         if (access(output_filename, F_OK) != -1)
         {
             fprintf(stderr, "Error: Output file '%s' already exists.\n", output_filename);
@@ -300,7 +313,8 @@ int main(int argc, char *argv[])
             return 1;
         }
         fwrite(concatenated_data, 1, concat_len, output_file);
-        printf("Concat len: %ld", concat_len);
+        printf("Written %ld bytes to file\n", concat_len);
+        // printf("Concat len: %ld", concat_len);
         // printf("Concatenated data:\n");
         // for (size_t i = 0; i < concat_len; ++i)
         // {
@@ -355,6 +369,7 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
         printf("Filename length sent: %d\n", filename_len);
+
         // filename
         if (send(sock, output_filename, strlen(output_filename), 0) < 0)
         {
@@ -367,8 +382,9 @@ int main(int argc, char *argv[])
         {
             perror("Error sending length");
         }
-        printf("concat_len sent: %zu\n", concat_len);
+        printf("File length sent: %zu\n", concat_len);
 
+        // Data
         if (send(sock, concatenated_data, concat_len, 0) < 0)
         {
             perror("Error sending file");
@@ -388,7 +404,7 @@ int main(int argc, char *argv[])
     }
 
     // close(sock);
-
+    printf("Success. End of program\n");
     // Clean up
     free(buffer);
     free(ciphertext);
